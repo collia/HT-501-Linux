@@ -35,7 +35,7 @@ Byte offset | Field length | Value
 ------------|--------------|---------
 0           | 1            | cmd_id. Always is 5
 1           | 4            | unixtime for record
-5           | 2            | Number of record
+5           | 2            | record number
 7           | 2            | Current temperature = (x-400)/10
 9           | 2            | Current humidity  = x/10
 11          | 2            | Minimal temp alert = (x-400)/10
