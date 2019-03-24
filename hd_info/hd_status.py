@@ -10,6 +10,11 @@ def open_device():
         raise ValueError('Our device is not connected')
     # set the active configuration. With no arguments, the first
     # configuration will be the active one
+    dev.reset()
+    if dev.is_kernel_driver_active(0) == True:
+        dev.detach_kernel_driver(0)
+    cfg = dev.get_active_configuration()
+    #print(cfg)
     dev.set_configuration()
     return dev
 
@@ -27,7 +32,7 @@ def parse_status(data):
                  'CO2',
                  'alert_CO2',
                  'flags']
-    ar = struct.unpack(fmt, data)
+    ar = struct.unpack(fmt, bytearray(data))
     #print([hex(i) for i in ar])
     fields = dict(zip(fmt_names, ar))
     fields['time'] = str(datetime.datetime.utcfromtimestamp(fields['time']))
@@ -38,14 +43,15 @@ def parse_status(data):
     fields['RH'] = fields['RH']/10
     fields['min_RH'] = fields['min_RH']/10
     fields['max_RH'] = fields['max_RH']/10
-    
     return fields
 
 def get_status(dev):
-    ret = dev.ctrl_transfer(0xa1, CLEAR_FEATURE, 0x0105, 0, 0x3d)
+    ret = dev.ctrl_transfer(0xa1, 1, 0x0105, 0, 0x3d)
+    
     status = parse_status(ret)
     if status['cmd_id'] != 5:
         raise ValueError('Wrong returned cmd_id {status[\'cmd_id\']}')
+    return status
 
 def format_status(status):
     #print(status)
@@ -71,4 +77,4 @@ def main():
 if __name__ == '__main__':
     main()
 
-    print(format_status(parse_status(b'\x05\x5c\x96\x2f\x6c\x01\x65\x02\x69\x00\xef\x01\x90\x03\x20\x00\x64\x03\xb6\xb0\x03\x00\x07\xd0\x01\xf1\x00\x00\x07\xd0\x00\x02')))
+assert format_status(parse_status([0x05,0x5c,0x96,0x2f,0x6c,0x01,0x65,0x02,0x69,0x00,0xef,0x01,0x90,0x03,0x20,0x00,0x64,0x03,0xb6,0xb0,0x03,0x00,0x07,0xd0,0x01,0xf1,0x00,0x00,0x07,0xd0,0x00,0x02])) == '#357(2019-03-23 13:06:52): T=21.7 RH=23.9 CO2=497'
