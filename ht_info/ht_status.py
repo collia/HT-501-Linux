@@ -1,22 +1,9 @@
 #! /usr/bin/python3
 
-import usb.core
 import struct
 import datetime
+import ht_device
 
-def open_device():
-    dev = usb.core.find(idVendor=0x10c4, idProduct=0x82cd)
-    if dev is None:
-        raise ValueError('Our device is not connected')
-    # set the active configuration. With no arguments, the first
-    # configuration will be the active one
-    dev.reset()
-    if dev.is_kernel_driver_active(0) == True:
-        dev.detach_kernel_driver(0)
-    cfg = dev.get_active_configuration()
-    #print(cfg)
-    dev.set_configuration()
-    return dev
 
 def parse_status(data):
     fmt = '>BIHHHHHHHxxxxxHxxHH'
@@ -46,8 +33,7 @@ def parse_status(data):
     return fields
 
 def get_status(dev):
-    ret = dev.ctrl_transfer(0xa1, 1, 0x0105, 0, 0x3d)
-    
+    ret = ht_device.send_request(dev, ht_device.Request.STATUS)
     status = parse_status(ret)
     if status['cmd_id'] != 5:
         raise ValueError('Wrong returned cmd_id {}'.format(status['cmd_id']))
@@ -67,7 +53,7 @@ def format_status(status):
     
 def main():
     try:
-        dev = open_device()
+        dev = ht_device.open_device()
         status = get_status(dev)
     except ValueError as e:
         print(e)
