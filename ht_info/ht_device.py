@@ -35,7 +35,6 @@ def main():
     except ValueError as e:
         print(e)
         return
-    print(format_status(status))
 
 if __name__ == '__main__':
     main()

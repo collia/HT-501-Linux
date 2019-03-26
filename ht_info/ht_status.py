@@ -39,7 +39,7 @@ def get_status(dev):
         raise ValueError('Wrong returned cmd_id {}'.format(status['cmd_id']))
     return status
 
-def format_status(status):
+def _format_status_text(status):
     #print(status)
     result = '#{}({}): T={} RH={} CO2={}'.format(
         status['record'],
@@ -49,6 +49,31 @@ def format_status(status):
         status['CO2'])
     return result
         
+def _format_status_table(status):
+    #print(status)
+    result = '#{:0>5d}    {:20s}   {:>2.1f}C   {:>2.1f}%  {:>4}'.format(
+        status['record'],
+        status['time'],
+        status['temperature'],
+        status['RH'],
+        status['CO2'])
+    return result
+
+def _format_status_csv(status):
+    #print(status)
+    result = '{},{},{},{},{}'.format(
+        status['record'],
+        status['time'],
+        status['temperature'],
+        status['RH'],
+        status['CO2'])
+    return result
+
+format_status= {
+    'text'  : _format_status_text,
+    'table' : _format_status_table,
+    'csv'   : _format_status_csv}
+    
     
     
 def main():
@@ -58,9 +83,9 @@ def main():
     except ValueError as e:
         print(e)
         return
-    print(format_status(status))
+    print(format_status['table'](status))
 
 if __name__ == '__main__':
     main()
 
-    assert format_status(parse_status([0x05,0x5c,0x96,0x2f,0x6c,0x01,0x65,0x02,0x69,0x00,0xef,0x01,0x90,0x03,0x20,0x00,0x64,0x03,0xb6,0xb0,0x03,0x00,0x07,0xd0,0x01,0xf1,0x00,0x00,0x07,0xd0,0x00,0x02])) == '#357(2019-03-23 13:06:52): T=21.7 RH=23.9 CO2=497'
+    assert format_status['text'](parse_status([0x05,0x5c,0x96,0x2f,0x6c,0x01,0x65,0x02,0x69,0x00,0xef,0x01,0x90,0x03,0x20,0x00,0x64,0x03,0xb6,0xb0,0x03,0x00,0x07,0xd0,0x01,0xf1,0x00,0x00,0x07,0xd0,0x00,0x02])) == '#357(2019-03-23 13:06:52): T=21.7 RH=23.9 CO2=497'
