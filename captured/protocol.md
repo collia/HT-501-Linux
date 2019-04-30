@@ -1,6 +1,6 @@
 # HT-501 usb protocol minimal description
 
-This document describe results of reverse engineering device protocol. I have no access to the official documentation, and this document can contain mistakes.
+This document describe results of reverse engineering device protocol. I have no access to the official documentation, and this document can contains mistakes.
 
 ## Sending requests
 
@@ -34,7 +34,7 @@ Answer on read status request
 Byte offset | Field length | Value
 ------------|--------------|---------
 0           | 1            | cmd_id. Always is 5
-1           | 4            | unixtime for record
+1           | 4            | unixtime for record. Local timzone
 5           | 2            | record number
 7           | 2            | Current temperature = (x-400)/10
 9           | 2            | Current humidity  = x/10
@@ -86,8 +86,12 @@ Byte offset | Field length | Value
 1           | 1            | packet id 0
 2           | 1            | address
 3           | 10           | serial number ascii string
-13          | 18           | test name. UTF-16 stringv(all bytes is 2 bytes length)
-31          | 1            | trailing byte?
+13          | 38           | test name. UTF-16 string (all bytes is 2 bytes length)
+52          | 2            | ??
+54          | 2            | Total records
+56          | 1            | Record interval in seconds (Supported 1-60)
+57          | 3            | ??
+60          | 2            | Minimum temp alert = (x-400)/10
 
 
 
@@ -101,7 +105,7 @@ Byte offset | Field length | Value
 4           | 2            | Min humidity alert  = x/10
 6           | 2            | Max humidity alert  = x/10
 8           | 1            | ??
-9           | 4            | setting time. unix time format
+9           | 4            | setting time. unix time format. UTC timezone
 13          | 1            | immediately/manually. manually=0, immediately=1
 14          | 4            | start time. unix time format
 18          | 2            | Test records
@@ -109,10 +113,12 @@ Byte offset | Field length | Value
 22          | 2            | Maximum CO2 level
 24          | 7            | ????
 31          | 1            | flags
+32          | 29           | unknown
 
-Also somewhere should be information about Total records and records interval. 
 
 ### Example
+
+usbmon prints only 32 bytes, but parameters packets has 62 bytes. So, in example was parsed only first 32 bytes
 
 ```
 ffff951b801dff00 2347178639 S Ci:1:005:0 s a1   01 0106 0000 003d 61 <
@@ -129,7 +135,7 @@ Bytes | value
 01    | address 1
 31 32333435 36373839 30 | serial number "1234567890"
 62006c 00610062 006c0061 0062006c 006100 | test name "blablabla"
-00 | trailling zero
+00 | ...
 
 
 Packet 2
