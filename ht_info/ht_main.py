@@ -12,7 +12,7 @@ def _init_paratemers():
     parser.add_argument('-p', '--period',  default=1,
                         help='time between reads')
 
-    parser.add_argument('-o', '--output',choices=['text', 'table', 'csv'],
+    parser.add_argument('-o', '--output',choices=['text', 'table', 'csv', 'json'],
                         default='text',
                         help='output format')
 

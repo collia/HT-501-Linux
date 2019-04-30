@@ -3,42 +3,53 @@
 import struct
 import datetime
 import ht_device
-
+import json
 
 def parse_parameters_pkt_1(data):
-    fmt = '>BBB10s30s18s'
+    fmt = '>BBB10s38s2sHB3sH'
     fmt_names = ['cmd_id',
                  'packet_id',
                  'address',
                  'serial',
                  'test_name',
-                 'unknown']
+                 'unknown_1',
+                 'total_records',
+                 'record_interval',
+                 'unknown_2',
+                 'min_temperature_alert'
+                 
+    ]
     #print(data)
     ar = struct.unpack(fmt, bytearray(data))
     #print([hex(i) for i in ar])
     fields = dict(zip(fmt_names, ar))
 
-    fields['serial'] = fields['serial'].decode('ascii')
+    try:
+        fields['serial'] = fields['serial'].decode('ascii')
+    except ValueError as e:
+        fields['serial'] = [hex(i) for i in fields['serial']]
     fields['test_name'] = fields['test_name'].decode('utf-16')
-    fields['unknown'] = [hex(i) for i in fields['unknown']]
+    fields['unknown_1'] = [hex(i) for i in fields['unknown_1']]
+    fields['unknown_2'] = [hex(i) for i in fields['unknown_2']]
+    fields['min_temperature_alert'] = (fields['min_temperature_alert'] - 400)/10
     
     return fields
 
 def parse_parameters_pkt_2(data):
-    fmt = '>BBHHHBIBIHHH7sB29s'
+    fmt = '>BBHHHBIBIH2sH7sB29s'
     fmt_names = ['cmd_id',
                  'packet_id',
                  'max_temperature_alert',
                  'min_humidity_alert',
                  'max_humidity_alert',
-                 'unknown_1',
+                 'unknown_3',
                  'setting_time',
                  'record_type',
                  'start_time',
                  'test_records',
-                 'unknown_2',
+                 'unknown_4',
                  'CO2_alert',
-                 'unknown_3',
+                 'unknown_5',
                  'flags',
                  'unknown']
     #print(data)
@@ -55,35 +66,45 @@ def parse_parameters_pkt_2(data):
     fields['start_time'] = str(datetime.datetime.utcfromtimestamp(fields['start_time']))
 
     fields['max_temperature_alert'] = (fields['max_temperature_alert'] - 400)/10
-    #fields['max_temp'] = (fields['max_temp'] - 400)/10
 
     fields['min_humidity_alert'] = fields['min_humidity_alert']/10
     fields['max_humidity_alert'] = fields['max_humidity_alert']/10
 
     fields['unknown'] = [hex(i) for i in fields['unknown']]
-    fields['unknown_3'] = [hex(i) for i in fields['unknown_3']]
+
+    fields['unknown_4'] = [hex(i) for i in fields['unknown_4']]
+    fields['unknown_5'] = [hex(i) for i in fields['unknown_5']]
     return fields
     
+def _get_parameters(dev, parameters_type):
+    ret = ht_device.send_request(dev, parameters_type)
+    status_1 = parse_parameters_pkt_1(ret)
+
+    if status_1['cmd_id'] != parameters_type:
+        raise ValueError('Wrong returned cmd_id {} != {}'.format(status_1['cmd_id'], parameters_type))
+    if status_1['packet_id'] != 0:
+        raise ValueError('Wrong returned packet_id {} != 0'.format(status_1['packet_id']))
+
+    #print(status_1)
+    ret = ht_device.send_request(dev, parameters_type)
+    status_2 = parse_parameters_pkt_2(ret)
+
+    if status_2['cmd_id'] != parameters_type:
+        raise ValueError('Wrong returned cmd_id {} for second request'.format(status_2['cmd_id']))
+    if status_2['packet_id'] != 1:
+        raise ValueError('Wrong returned packet_id {} != 1'.format(status_2['packet_id']))
+    #print(status_2)
+    status_1.update(status_2)
+    del status_1['cmd_id']
+    del status_1['packet_id']
+    return status_1
+
 def get_seting_parameters(dev):
-    ret = ht_device.send_request(dev, ht_device.Request.SETTING_PARAMETERS)
-    status = parse_parameters_pkt_1(ret)
-    if status['cmd_id'] != 6:
-        raise ValueError('Wrong returned cmd_id {} != {}'.format(status['cmd_id'], ht_device.Request.SETTING_PARAMETERS))
-    if status['packet_id'] != 0:
-        raise ValueError('Wrong returned packet_id {} != 0'.format(status['packet_id']))
+    return _get_parameters(dev, ht_device.Request.SETTING_PARAMETERS)
 
-    print(status)
-    ret = ht_device.send_request(dev, ht_device.Request.SETTING_PARAMETERS)
-    status = parse_parameters_pkt_2(ret)
+def get_record_parameters(dev):
+    return _get_parameters(dev, ht_device.Request.RECORD_PARAMETERS)
 
-    if status['cmd_id'] != 6:
-        raise ValueError('Wrong returned cmd_id {} for second request'.format(status['cmd_id']))
-    if status['packet_id'] != 1:
-        raise ValueError('Wrong returned packet_id {} != 1'.format(status['packet_id']))
-
-    
-    print(status)    
-    return status
 
 def _format_parameters_text(status):
     #print(status)
@@ -114,16 +135,25 @@ def _format_parameters_text(status):
 #         status['RH'],
 #         status['CO2'])
 #     return result
+def _format_status_json(status):
+    return json.dumps(status)
 
 format_parameters= {
-    'text'  : _format_parameters_text}
-    
+    'text'  : _format_parameters_text,
+    'json'   : _format_status_json}
     
     
 def main():
     try:
         dev = ht_device.open_device()
+        print("Setting parameters:")
         status = get_seting_parameters(dev)
+        print(format_parameters['json'](status))
+
+        print("Recorded parameters:")
+        status = get_record_parameters(dev)
+        print(format_parameters['json'](status))
+        
     except ValueError as e:
         print(e)
         return

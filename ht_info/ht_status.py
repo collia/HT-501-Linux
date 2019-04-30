@@ -3,7 +3,7 @@
 import struct
 import datetime
 import ht_device
-
+import json
 
 def parse_status(data):
     fmt = '>BIHHHHHHHxxxxxHxxHH'
@@ -69,10 +69,14 @@ def _format_status_csv(status):
         status['CO2'])
     return result
 
+def _format_status_json(status):
+    return json.dumps(status)
+
 format_status= {
     'text'  : _format_status_text,
     'table' : _format_status_table,
-    'csv'   : _format_status_csv}
+    'csv'   : _format_status_csv,
+    'json'   : _format_status_json}
     
     
     

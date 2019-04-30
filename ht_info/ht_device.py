@@ -3,10 +3,10 @@
 import usb.core
 import enum
 
-class Request(enum.Enum):
+class Request(enum.IntEnum):
      STATUS = 5
      SETTING_PARAMETERS = 6
-     RECORD_PARAMETERS = 3
+     RECORD_PARAMETERS = 7
 
 def open_device():
     dev = usb.core.find(idVendor=0x10c4, idProduct=0x82cd)
